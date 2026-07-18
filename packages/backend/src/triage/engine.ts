@@ -282,6 +282,130 @@ const MENTAL_HEALTH_CRISIS_RULES: {
   },
 ];
 
+// ─── Medication Interaction Rules ────────────────────────────────────────────
+
+const MEDICATION_INTERACTION_RULES: {
+  patterns: RegExp[];
+  reason: string;
+  action: string;
+  level: RiskLevel;
+}[] = [
+  // Warfarin/Coumadin + Aspirin/NSAIDs → EMERGENCY (bleeding risk)
+  {
+    patterns: [
+      /(?=.*\b(warfarin|coumadin|jantoven)\b)(?=.*\b(aspirin|nsaid|ibuprofen|naproxen|diclofenac|meloxicam|celecoxib|indomethacin|ketorolac|advil|motrin|aleve)\b)/i,
+    ],
+    reason:
+      "Dangerous combination: Warfarin (Coumadin) with aspirin/NSAID — high risk of severe bleeding including GI hemorrhage and intracranial bleeding.",
+    action:
+      "Seek emergency care immediately. Do not take additional doses of either medication. This combination significantly increases bleeding risk. Call 911 if any signs of bleeding: blood in stool, vomiting blood, severe headache, unusual bruising.",
+    level: "EMERGENCY",
+  },
+  // ACE inhibitors + Potassium supplements/spironolactone → URGENT (hyperkalemia)
+  {
+    patterns: [
+      new RegExp(
+        "(?=.*\\b(lisinopril|enalapril|ramipril|captopril|benazepril|quinapril|fosinopril|moexipril|perindopril|trandolapril|ace\\s*inhibitor|zestril|vasotec|altace|accupril|monopril|univasc)\\b)" +
+        "(?=.*\\b(potassium|klor-con|k-dur|kalydeco|spironolactone|aldactone)\\b)",
+        "i",
+      ),
+    ],
+    reason:
+      "Dangerous combination: ACE inhibitor with potassium supplements or spironolactone — risk of life-threatening hyperkalemia (dangerously high potassium).",
+    action:
+      "Seek urgent care within 24 hours. Request an electrolyte panel and ECG. Do not take additional potassium supplements. Watch for muscle weakness, palpitations, or numbness/tingling.",
+    level: "URGENT",
+  },
+  // SSRIs + MAOIs → EMERGENCY (serotonin syndrome)
+  {
+    patterns: [
+      /(?=.*\b(fluoxetine|sertraline|paroxetine|citalopram|escitalopram|fluvoxamine|ssri|prozac|zoloft|paxil|celexa|lexapro|luvox)\b)(?=.*\b(phenelzine|tranylcypromine|isocarboxazid|selegiline|maoi|nardil|parnate|marplan|emsam)\b)/i,
+    ],
+    reason:
+      "Dangerous combination: SSRI antidepressant with MAOI — risk of serotonin syndrome, a potentially fatal condition causing hyperthermia, muscle rigidity, seizures, and death.",
+    action:
+      "Call 911 immediately. Serotonin syndrome is a medical emergency. Do not take any additional doses of either medication. Inform emergency responders of both medications.",
+    level: "EMERGENCY",
+  },
+  // Opioids + Benzodiazepines → EMERGENCY (respiratory depression)
+  {
+    patterns: [
+      /(?=.*\b(morphine|oxycodone|hydrocodone|fentanyl|codeine|tramadol|hydromorphone|oxymorphone|methadone|buprenorphine|percocet|vicodin|oxycontin|dilaudid|opioid|narcotic)\b)(?=.*\b(diazepam|lorazepam|alprazolam|clonazepam|temazepam|midazolam|chlordiazepoxide|oxazepam|benzodiazepine|benzo|valium|ativan|xanax|klonopin|restoril)\b)/i,
+    ],
+    reason:
+      "Dangerous combination: Opioid with benzodiazepine — severe risk of respiratory depression, coma, and death. The FDA has issued a black box warning for this combination.",
+    action:
+      "Call 911 immediately. This combination can cause fatal respiratory depression. Do not take any additional doses. If breathing is slow or shallow (fewer than 8 breaths per minute), this is a medical emergency.",
+    level: "EMERGENCY",
+  },
+  // Metformin + Contrast dye / kidney issues → URGENT (lactic acidosis)
+  {
+    patterns: [
+      /(?=.*\b(metformin|glucophage|fortamet|riomet)\b)(?=.*\b(contrast|dye|ct\s*scan|angiogram|ivp|kidney\s*(problem|issue|disease|failure)|renal|ckd|creatinine)\b)/i,
+    ],
+    reason:
+      "Dangerous combination: Metformin with contrast dye or kidney impairment — risk of lactic acidosis, a rare but potentially fatal metabolic condition.",
+    action:
+      "Seek urgent care within 24 hours if contrast was recently administered. Hold metformin and contact the prescribing physician immediately. Watch for muscle pain, weakness, trouble breathing, stomach pain, or feeling cold.",
+    level: "URGENT",
+  },
+  // Lithium + NSAIDs/diuretics → URGENT (lithium toxicity)
+  {
+    patterns: [
+      /(?=.*\b(lithium|lithobid|eskalith)\b)(?=.*\b(ibuprofen|naproxen|aspirin|diclofenac|meloxicam|nsaid|furosemide|lasix|hctz|hydrochlorothiazide|chlorthalidone|diuretic|water\s*pill|advil|motrin|aleve)\b)/i,
+    ],
+    reason:
+      "Dangerous combination: Lithium with NSAIDs or diuretics — risk of lithium toxicity causing confusion, tremor, seizures, and permanent kidney damage.",
+    action:
+      "Seek urgent care within 24 hours. Request an immediate lithium level check. Watch for tremor, confusion, slurred speech, excessive thirst, nausea, or diarrhea. Do not stop lithium abruptly — consult prescribing physician.",
+    level: "URGENT",
+  },
+  // Digoxin + clarithromycin/erythromycin → URGENT
+  {
+    patterns: [
+      /(?=.*\b(digoxin|lanoxin|digitalis)\b)(?=.*\b(clarithromycin|erythromycin|biaxin|ery-tab)\b)/i,
+    ],
+    reason:
+      "Dangerous combination: Digoxin with clarithromycin or erythromycin — these antibiotics can drastically increase digoxin levels, causing digoxin toxicity (nausea, vision changes, dangerous arrhythmias).",
+    action:
+      "Seek urgent care within 24 hours. Request a digoxin level check. Watch for nausea, vomiting, vision changes (yellow or green halos around lights), confusion, or irregular heartbeat.",
+    level: "URGENT",
+  },
+  // Statins + grapefruit / certain antifungals → ROUTINE (rhabdomyolysis)
+  {
+    patterns: [
+      /(?=.*\b(atorvastatin|rosuvastatin|simvastatin|pravastatin|lovastatin|fluvastatin|pitavastatin|lipitor|crestor|zocor|statin)\b)(?=.*\b(grapefruit|ketoconazole|itraconazole|fluconazole|voriconazole|posaconazole|antifungal|nizoral|sporanox|diflucan|vfend)\b)/i,
+    ],
+    reason:
+      "Drug interaction: Statin combined with grapefruit or azole antifungal — increased risk of muscle damage (rhabdomyolysis) from elevated statin blood levels.",
+    action:
+      "Schedule a routine appointment to review medications. Avoid grapefruit and grapefruit juice entirely. Watch for unexplained muscle pain, tenderness, weakness, or dark-colored urine. Contact your physician promptly if these occur.",
+    level: "ROUTINE",
+  },
+  // Alcohol + metronidazole / disulfiram-like reaction → URGENT
+  {
+    patterns: [
+      /(?=.*\b(alcohol|drinking|drunk|beer|wine|liquor|vodka|whiskey|ethanol)\b)(?=.*\b(metronidazole|flagyl|tinidazole|disulfiram|antabuse)\b)/i,
+    ],
+    reason:
+      "Dangerous combination: Alcohol with metronidazole (Flagyl) — can cause a severe disulfiram-like reaction: flushing, nausea, vomiting, rapid heart rate, and dangerous drop in blood pressure.",
+    action:
+      "Seek urgent care within 24 hours if symptoms are present. Stop alcohol consumption immediately. This reaction can be severe and last for hours. Do not consume alcohol for at least 48 hours after the last dose of metronidazole.",
+    level: "URGENT",
+  },
+  // Multiple CNS depressants (benzos + alcohol + opioids) → EMERGENCY
+  {
+    patterns: [
+      /(?=.*\b(diazepam|lorazepam|alprazolam|clonazepam|temazepam|midazolam|benzo|valium|ativan|xanax|klonopin|restoril)\b)(?=.*\b(alcohol|drinking|drunk|beer|wine|liquor|vodka|whiskey|ethanol)\b)(?=.*\b(opioid|morphine|oxycodone|hydrocodone|fentanyl|codeine|tramadol|percocet|vicodin|oxycontin|dilaudid|narcotic|heroin)\b)/i,
+    ],
+    reason:
+      "Multiple CNS depressants detected: benzodiazepine + alcohol + opioid — extreme risk of fatal respiratory depression, coma, and death. Synergistic CNS depression multiplies the danger.",
+    action:
+      "Call 911 immediately. This is a life-threatening combination. If the person is not breathing or breathing slowly (fewer than 8 breaths per minute), begin rescue breathing if trained. Do not leave the person alone. Turn them on their side to prevent choking.",
+    level: "EMERGENCY",
+  },
+];
+
 // ─── Overdose / Poisoning Rules ──────────────────────────────────────────────
 
 const OVERDOSE_POISONING_RULES: {
@@ -509,6 +633,80 @@ function checkOverdosePoisoning(
   return { level, reasons, actions };
 }
 
+/**
+ * Check for dangerous medication interactions from patient-reported medication lists.
+ * Searches the chief complaint and symptom descriptions for known dangerous drug
+ * combinations and also checks for polypharmacy (3+ medication mentions).
+ *
+ * Returns the highest risk level, the matching reasons, and recommended actions.
+ */
+function checkMedicationInteractions(
+  chiefComplaint: string,
+  symptoms: SymptomInput[],
+): { level: RiskLevel | null; reasons: string[]; actions: string[] } {
+  const allText = [
+    chiefComplaint,
+    ...symptoms.map((s) => s.description),
+    ...symptoms.flatMap((s) => s.associatedSymptoms),
+  ].join(" | ");
+
+  const reasons: string[] = [];
+  const actions: string[] = [];
+  let level: RiskLevel | null = null;
+
+  // ── Check known dangerous combinations ──
+  for (const rule of MEDICATION_INTERACTION_RULES) {
+    for (const pattern of rule.patterns) {
+      if (pattern.test(allText)) {
+        reasons.push(rule.reason);
+        actions.push(rule.action);
+        if (rule.level === "EMERGENCY") {
+          level = "EMERGENCY";
+        } else if (rule.level === "URGENT" && level !== "EMERGENCY") {
+          level = "URGENT";
+        } else if (rule.level === "ROUTINE" && !level) {
+          level = "ROUTINE";
+        }
+        break; // one match per rule category
+      }
+    }
+  }
+
+  // ── Polypharmacy check: detect 3+ medication mentions ──
+  // Match common drug suffixes: -pril, -olol, -statin, -pine, -pam, -lam, -cin,
+  // -zole, -ide, -sone, -vir, -mab, -tinib, -mine, -bital, -done, -one, -formin, etc.
+  if (!level || level !== "EMERGENCY") {
+    // Suffix-based drug detection pattern
+    const drugSuffixPattern =
+      /\b\w*(pril|olol|statin|pine|sartan|pam|lam|zole|vir|mab|tinib|mine|bital|done|sone|sart|formin|gabapentin|prazole|tidine|cycline|micin|floxacin|glitazone|gliptin|dipine|afil|pramine|triptan|zodone|tidone|barbital|phan|phine|orphan)\b/i;
+
+    const drugMentions = new Set<string>();
+
+    // Find drug-like words in the text
+    const words = allText.split(/[\s|,;.!?()]+/);
+    for (const word of words) {
+      const lower = word.toLowerCase();
+      if (drugSuffixPattern.test(lower) && lower.length > 3) {
+        drugMentions.add(lower);
+      }
+    }
+
+    if (drugMentions.size >= 3) {
+      reasons.push(
+        "Polypharmacy detected: 3 or more medication-like terms mentioned. A comprehensive medication review is recommended to check for interactions, duplications, and deprescribing opportunities.",
+      );
+      actions.push(
+        "Schedule a medication review appointment. Bring all current medications (including OTC, supplements, and herbals) to the visit. Do not stop any prescribed medications without consulting your physician.",
+      );
+      if (!level) {
+        level = "ROUTINE";
+      }
+    }
+  }
+
+  return { level, reasons, actions };
+}
+
 /** Check vitals for dangerous abnormalities warranting emergency or urgent care. */
 function assessVitals(vitals: VitalInput | undefined, age: number): {
   level: RiskLevel | null;
@@ -721,6 +919,8 @@ function assessUrgency(
  * 1. RED FLAGS (life-threatening)                        → EMERGENCY
  * 2. Pediatric red flags (age < 18)                      → EMERGENCY / URGENT
  * 3. Mental health crisis detection                      → EMERGENCY / URGENT
+ * 3b. Overdose / poisoning detection                     → EMERGENCY / URGENT
+ * 3c. Medication interaction detection                   → EMERGENCY / URGENT / ROUTINE
  * 4. Abnormal vitals (critical)                           → EMERGENCY
  * 5. High-urgency patterns (severe pain, fracture, etc.)  → URGENT
  * 6. Abnormal vitals (urgent, non-critical)               → URGENT
@@ -784,6 +984,20 @@ export function assessRisk(triageCase: TriageCase): TriageResult {
       (overdoseAssessment.level === "URGENT" && riskLevel !== "EMERGENCY")
     ) {
       riskLevel = overdoseAssessment.level;
+    }
+  }
+
+  // ── Step 3c: Medication interaction detection ──
+  const medInteractionAssessment = checkMedicationInteractions(chiefComplaint, symptoms);
+  if (medInteractionAssessment.reasons.length > 0) {
+    allReasons.push(...medInteractionAssessment.reasons);
+    allActions.push(...medInteractionAssessment.actions);
+    if (
+      medInteractionAssessment.level === "EMERGENCY" ||
+      (medInteractionAssessment.level === "URGENT" && riskLevel !== "EMERGENCY") ||
+      (medInteractionAssessment.level === "ROUTINE" && riskLevel === "SELF_CARE")
+    ) {
+      riskLevel = medInteractionAssessment.level;
     }
   }
 

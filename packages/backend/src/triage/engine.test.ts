@@ -1356,4 +1356,286 @@ describe("assessRisk", () => {
       expect(result.riskLevel).toBe("URGENT");
     });
   });
+
+  // ── Medication Interaction Detection ────────────────────────────────────────
+
+  describe("medication interaction detection", () => {
+    describe("specific drug combinations", () => {
+      it("returns EMERGENCY for warfarin + aspirin combination", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "I take warfarin and also aspirin for headaches",
+            symptoms: [
+              {
+                description: "Been taking coumadin daily and using aspirin for pain relief",
+                severity: 5,
+                duration: "1 week",
+                bodyArea: "whole body",
+                associatedSymptoms: ["bruising easily"],
+              },
+            ],
+          }),
+        );
+        expect(result.riskLevel).toBe("EMERGENCY");
+        expect(result.reasoning).toContain("Warfarin");
+        expect(result.recommendedAction).toContain("bleeding");
+      });
+
+      it("returns EMERGENCY for SSRI + MAOI combination", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "I'm on fluoxetine and just started Nardil for depression",
+            symptoms: [
+              {
+                description: "Taking Prozac and phenelzine together, feeling confused and agitated",
+                severity: 8,
+                duration: "2 days",
+                bodyArea: "mental",
+                associatedSymptoms: ["fever", "muscle stiffness", "confusion"],
+              },
+            ],
+          }),
+        );
+        expect(result.riskLevel).toBe("EMERGENCY");
+        expect(result.reasoning).toContain("serotonin syndrome");
+        expect(result.recommendedAction).toContain("911");
+      });
+
+      it("returns EMERGENCY for opioid + benzodiazepine combination", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "I took oxycodone and Xanax together and feel very drowsy",
+            symptoms: [
+              {
+                description: "Taking Percocet and alprazolam, breathing feels slow",
+                severity: 9,
+                duration: "2 hours",
+                bodyArea: "whole body",
+                associatedSymptoms: ["drowsiness", "slow breathing", "confusion"],
+              },
+            ],
+          }),
+        );
+        expect(result.riskLevel).toBe("EMERGENCY");
+        expect(result.reasoning).toContain("Opioid");
+        expect(result.recommendedAction).toContain("respiratory depression");
+      });
+
+      it("returns EMERGENCY for multiple CNS depressants (benzo + alcohol + opioid)", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "I took Valium with vodka and also some Vicodin",
+            symptoms: [
+              {
+                description: "Drank alcohol and took diazepam and hydrocodone, barely breathing",
+                severity: 10,
+                duration: "1 hour",
+                bodyArea: "whole body",
+                associatedSymptoms: ["unresponsive", "shallow breathing"],
+              },
+            ],
+          }),
+        );
+        expect(result.riskLevel).toBe("EMERGENCY");
+        expect(result.reasoning).toContain("CNS depressants");
+      });
+
+      it("returns URGENT for lithium + NSAID combination", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "I take lithium and have been using ibuprofen for back pain",
+            symptoms: [
+              {
+                description: "On lithium for bipolar and taking Advil daily for back pain, feeling shaky",
+                severity: 6,
+                duration: "3 days",
+                bodyArea: "whole body",
+                associatedSymptoms: ["tremor", "confusion", "increased thirst"],
+              },
+            ],
+          }),
+        );
+        expect(result.riskLevel).toBe("URGENT");
+        expect(result.reasoning).toContain("Lithium");
+      });
+
+      it("returns URGENT for metformin + contrast dye / kidney issues", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "I'm on metformin and had a CT scan with contrast today",
+            symptoms: [
+              {
+                description: "Taking metformin for diabetes, had contrast dye for CT scan, have kidney disease",
+                severity: 5,
+                duration: "today",
+                bodyArea: "whole body",
+                associatedSymptoms: ["muscle pain", "weakness"],
+              },
+            ],
+          }),
+        );
+        expect(result.riskLevel).toBe("URGENT");
+        expect(result.reasoning).toContain("Metformin");
+      });
+
+      it("returns ROUTINE for statins + grapefruit interaction", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "I take Lipitor and drink grapefruit juice every morning",
+            symptoms: [
+              {
+                description: "Taking atorvastatin daily with grapefruit juice, mild muscle aches",
+                severity: 3,
+                duration: "2 weeks",
+                bodyArea: "legs",
+                associatedSymptoms: ["mild muscle soreness"],
+              },
+            ],
+          }),
+        );
+        expect(result.riskLevel).toBe("ROUTINE");
+        expect(result.reasoning).toContain("Statin");
+      });
+    });
+
+    describe("polypharmacy detection", () => {
+      it("returns ROUTINE when 3+ medication-like terms are detected", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "I'm taking lisinopril, atorvastatin, and metformin daily",
+            symptoms: [
+              {
+                description: "Managing blood pressure with lisinopril, cholesterol with atorvastatin, and diabetes with metformin",
+                severity: 2,
+                duration: "months",
+                bodyArea: "whole body",
+                associatedSymptoms: [],
+              },
+            ],
+          }),
+        );
+        expect(result.riskLevel).toBe("ROUTINE");
+        expect(result.reasoning).toContain("Polypharmacy");
+      });
+
+      it("returns ROUTINE for polypharmacy with drug suffixes even in chief complaint alone", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "Reviewing medications: amlodipine, simvastatin, and metoprolol",
+            symptoms: [
+              {
+                description: "Routine medication check",
+                severity: 1,
+                duration: "0 days",
+                bodyArea: "whole body",
+                associatedSymptoms: [],
+              },
+            ],
+          }),
+        );
+        expect(result.riskLevel).toBe("ROUTINE");
+        expect(result.reasoning).toContain("medication review");
+      });
+
+      it("returns ROUTINE for polypharmacy with -olol, -pril, and -statin suffixes", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "Taking atenolol, ramipril, and rosuvastatin",
+            symptoms: [
+              {
+                description: "Cardiac medications — beta blocker, ACE inhibitor, and statin",
+                severity: 2,
+                duration: "ongoing",
+                bodyArea: "whole body",
+                associatedSymptoms: [],
+              },
+            ],
+          }),
+        );
+        expect(result.riskLevel).toBe("ROUTINE");
+        expect(result.reasoning).toContain("Polypharmacy");
+      });
+    });
+
+    describe("negative tests", () => {
+      it("returns SELF_CARE when no medications are mentioned", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "Mild headache after a long day",
+            symptoms: [
+              {
+                description: "Dull headache from screen time",
+                severity: 2,
+                duration: "3 hours",
+                bodyArea: "head",
+                associatedSymptoms: ["eye strain"],
+              },
+            ],
+          }),
+        );
+        expect(result.riskLevel).toBe("SELF_CARE");
+        expect(result.reasoning).not.toContain("medication");
+      });
+
+      it("does NOT flag a single medication without an interaction partner", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "I take lisinopril for blood pressure",
+            symptoms: [
+              {
+                description: "Taking lisinopril 10mg daily for hypertension",
+                severity: 1,
+                duration: "1 year",
+                bodyArea: "whole body",
+                associatedSymptoms: [],
+              },
+            ],
+          }),
+        );
+        // Should not flag any interaction for a single safe medication
+        expect(result.riskLevel).toBe("SELF_CARE");
+        expect(result.reasoning).not.toContain("interaction");
+        expect(result.reasoning).not.toContain("Polypharmacy");
+      });
+
+      it("does NOT flag warfarin alone without interacting drug", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "I take warfarin as prescribed, checking for routine monitoring",
+            symptoms: [
+              {
+                description: "On Coumadin for AFib, due for INR check",
+                severity: 1,
+                duration: "ongoing",
+                bodyArea: "whole body",
+                associatedSymptoms: [],
+              },
+            ],
+          }),
+        );
+        expect(result.riskLevel).toBe("SELF_CARE");
+        expect(result.reasoning).not.toContain("Warfarin");
+      });
+
+      it("does NOT flag two safe medications with no known interaction", () => {
+        const result = assessRisk(
+          makeCase({
+            chiefComplaint: "I take lisinopril and metformin for my conditions",
+            symptoms: [
+              {
+                description: "Taking lisinopril for BP and metformin for diabetes, feeling fine",
+                severity: 1,
+                duration: "ongoing",
+                bodyArea: "whole body",
+                associatedSymptoms: [],
+              },
+            ],
+          }),
+        );
+        // Lisinopril + metformin is not a dangerous combination in our rules
+        expect(result.riskLevel).toBe("SELF_CARE");
+        expect(result.reasoning).not.toContain("Dangerous combination");
+      });
+    });
+  });
 });
