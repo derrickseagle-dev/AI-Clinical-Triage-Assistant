@@ -866,4 +866,494 @@ describe("assessRisk", () => {
       expect(result.recommendedAction).toContain("988");
     });
   });
+
+  // ── Overdose / Poisoning Detection ──────────────────────────────────────────
+
+  describe("overdose / poisoning", () => {
+    it("returns EMERGENCY for known overdose in chief complaint", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "Possible overdose on prescription medication",
+          age: 28,
+          symptoms: [
+            {
+              description: "Patient took an overdose of sleeping pills",
+              severity: 9,
+              duration: "30 minutes",
+              bodyArea: "whole body",
+              associatedSymptoms: ["drowsy", "confused"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("Poison Control");
+      expect(result.recommendedAction).toContain("1-800-222-1222");
+    });
+
+    it("returns EMERGENCY for 'took too many pills' pattern", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I took too many pills",
+          age: 34,
+          symptoms: [
+            {
+              description: "Took too many painkillers",
+              severity: 8,
+              duration: "1 hour",
+              bodyArea: "whole body",
+              associatedSymptoms: ["nausea", "dizziness"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("Do NOT induce vomiting");
+    });
+
+    it("returns EMERGENCY for too much medication", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I accidentally took too much medication",
+          age: 45,
+          symptoms: [
+            {
+              description: "Took double dose of blood pressure medication by mistake",
+              severity: 6,
+              duration: "30 minutes",
+              bodyArea: "whole body",
+              associatedSymptoms: ["lightheaded"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("Poison Control");
+    });
+
+    it("returns EMERGENCY for accidental ingestion", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "My toddler had an accidental ingestion of cleaning fluid",
+          age: 2,
+          symptoms: [
+            {
+              description: "Accidental ingestion of bathroom cleaner",
+              severity: 9,
+              duration: "5 minutes",
+              bodyArea: "mouth",
+              associatedSymptoms: ["coughing"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("911");
+    });
+
+    it("returns EMERGENCY for opioid toxidrome — pinpoint pupils", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "My friend has pinpoint pupils and is barely breathing",
+          age: 26,
+          symptoms: [
+            {
+              description: "Pinpoint pupils, very drowsy, slow breathing",
+              severity: 10,
+              duration: "unknown",
+              bodyArea: "whole body",
+              associatedSymptoms: ["not responsive", "blue lips"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("Poison Control");
+    });
+
+    it("returns EMERGENCY for toxic ingestion — drank bleach", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I drank bleach by accident",
+          age: 42,
+          symptoms: [
+            {
+              description: "Drank bleach, burning in throat and mouth",
+              severity: 10,
+              duration: "5 minutes",
+              bodyArea: "throat",
+              associatedSymptoms: ["vomiting", "pain"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("Do NOT induce vomiting");
+    });
+
+    it("returns EMERGENCY for carbon monoxide poisoning", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I think we have carbon monoxide poisoning",
+          age: 35,
+          symptoms: [
+            {
+              description: "Headache and nausea, woke up feeling terrible",
+              severity: 8,
+              duration: "2 hours",
+              bodyArea: "whole body",
+              associatedSymptoms: ["confusion", "dizziness", "exhaust fumes smell"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("fresh air");
+    });
+
+    it("returns EMERGENCY for alcohol poisoning", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "My friend has alcohol poisoning",
+          age: 21,
+          symptoms: [
+            {
+              description: "Drank too much alcohol and is now unconscious and won't wake",
+              severity: 10,
+              duration: "1 hour",
+              bodyArea: "whole body",
+              associatedSymptoms: ["vomiting", "unresponsive"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("side to prevent choking");
+    });
+
+    it("returns EMERGENCY for not breathing with drug context (opioid respiratory depression)", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "He's not breathing after taking heroin",
+          age: 29,
+          symptoms: [
+            {
+              description: "Not breathing, unresponsive after opioid use",
+              severity: 10,
+              duration: "unknown",
+              bodyArea: "whole body",
+              associatedSymptoms: ["cyanosis", "pinpoint pupils"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("911");
+    });
+  });
+
+  // ── New Emergency Red Flags ──────────────────────────────────────────────────
+
+  describe("new emergency red flags", () => {
+    it("returns EMERGENCY for possible sepsis", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "Possible sepsis — high fever with confusion and shaking",
+          age: 55,
+          symptoms: [
+            {
+              description: "Fever of 103, confused, and shaking with rigors",
+              severity: 9,
+              duration: "6 hours",
+              bodyArea: "whole body",
+              associatedSymptoms: ["confusion", "shaking", "fever"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("911");
+    });
+
+    it("returns EMERGENCY for septic shock mention", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "Patient appears septic",
+          age: 68,
+          symptoms: [
+            {
+              description: "Low blood pressure, high fever, septic",
+              severity: 10,
+              duration: "12 hours",
+              bodyArea: "whole body",
+              associatedSymptoms: ["confusion", "shaking chills"],
+            },
+          ],
+          vitals: { temperatureF: 103.5, systolicBP: 85, heartRate: 125 },
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+    });
+
+    it("returns EMERGENCY for blood clot / DVT + shortness of breath", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I have a swollen leg with pain and now shortness of breath",
+          age: 45,
+          symptoms: [
+            {
+              description: "Swollen leg, calf pain, sudden shortness of breath",
+              severity: 8,
+              duration: "2 hours",
+              bodyArea: "leg",
+              associatedSymptoms: ["chest pain", "difficulty breathing"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("911");
+    });
+
+    it("returns EMERGENCY for deep vein thrombosis", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I think I have a deep vein thrombosis",
+          age: 52,
+          symptoms: [
+            {
+              description: "Painful, warm, swollen calf — possible deep vein thrombosis",
+              severity: 7,
+              duration: "1 day",
+              bodyArea: "leg",
+              associatedSymptoms: ["redness", "warmth"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+    });
+
+    it("returns EMERGENCY for ectopic pregnancy", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I have sharp abdominal pain with vaginal bleeding, could be ectopic",
+          age: 28,
+          symptoms: [
+            {
+              description: "Sharp abdominal pain on one side with vaginal bleeding",
+              severity: 9,
+              duration: "3 hours",
+              bodyArea: "abdomen",
+              associatedSymptoms: ["dizziness", "shoulder pain"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("911");
+    });
+
+    it("returns EMERGENCY for testicular torsion", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "Sudden severe testicular pain, possible torsion",
+          age: 16,
+          symptoms: [
+            {
+              description: "Severe testicle pain, swollen testicle, torsion",
+              severity: 9,
+              duration: "2 hours",
+              bodyArea: "testicles",
+              associatedSymptoms: ["nausea", "vomiting"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("surgery");
+    });
+
+    it("returns EMERGENCY for aortic dissection", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I have a tearing pain in my chest going to my back",
+          age: 60,
+          symptoms: [
+            {
+              description: "Ripping pain in chest radiating to back — possible aortic dissection",
+              severity: 10,
+              duration: "30 minutes",
+              bodyArea: "chest",
+              associatedSymptoms: ["sweating", "dizziness"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("911");
+    });
+
+    it("returns EMERGENCY for meningitis symptoms (stiff neck + fever + headache)", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I have a stiff neck with fever and a severe headache",
+          age: 22,
+          symptoms: [
+            {
+              description: "Stiff neck, fever of 102, pounding headache",
+              severity: 9,
+              duration: "8 hours",
+              bodyArea: "head and neck",
+              associatedSymptoms: ["fever", "stiff neck", "headache", "light sensitivity"],
+            },
+          ],
+          vitals: { temperatureF: 102.5 },
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("911");
+    });
+
+    it("returns EMERGENCY for meningitis keyword", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I think my child has meningitis",
+          age: 8,
+          symptoms: [
+            {
+              description: "Fever and headache, worried about meningitis",
+              severity: 8,
+              duration: "6 hours",
+              bodyArea: "head",
+              associatedSymptoms: ["stiff neck", "vomiting"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+    });
+
+    it("returns EMERGENCY for third degree burns", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I have third degree burns on my arm",
+          age: 30,
+          symptoms: [
+            {
+              description: "Third degree burn from hot oil, charred skin",
+              severity: 10,
+              duration: "15 minutes",
+              bodyArea: "arm",
+              associatedSymptoms: ["severe pain"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("Do not apply ice");
+    });
+
+    it("returns EMERGENCY for electrical injury / electrocution", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I was electrocuted by a live wire",
+          age: 38,
+          symptoms: [
+            {
+              description: "Electric shock from exposed wire, burnt hand",
+              severity: 9,
+              duration: "10 minutes",
+              bodyArea: "hand",
+              associatedSymptoms: ["numbness", "muscle pain"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("electrical source");
+    });
+
+    it("returns EMERGENCY for near-drowning", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "My child nearly drowned in the pool",
+          age: 4,
+          symptoms: [
+            {
+              description: "Submerged in water for 30 seconds, inhaled water",
+              severity: 9,
+              duration: "just happened",
+              bodyArea: "lungs",
+              associatedSymptoms: ["coughing", "short of breath"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("delayed complications");
+    });
+
+    // ── Burn severity scaling ───────────────────────────────────────────────
+
+    it("returns URGENT for a burn that is not clearly minor", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I burned my hand on the stove",
+          age: 35,
+          symptoms: [
+            {
+              description: "Burn on palm from hot pan, blistering",
+              severity: 6,
+              duration: "30 minutes",
+              bodyArea: "hand",
+              associatedSymptoms: ["redness", "pain"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("URGENT");
+      expect(result.recommendedAction).toContain("urgent care");
+    });
+
+    it("returns ROUTINE for a small minor burn", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "Small burn on finger from touching a hot dish",
+          age: 28,
+          symptoms: [
+            {
+              description: "Minor burn on fingertip, small burn",
+              severity: 2,
+              duration: "1 hour",
+              bodyArea: "finger",
+              associatedSymptoms: [],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("ROUTINE");
+      expect(result.recommendedAction).toContain("cool water");
+    });
+
+    it("returns URGENT for a scald without minor qualifier", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I spilled boiling water on my leg",
+          age: 40,
+          symptoms: [
+            {
+              description: "Scald from boiling water, large red area on thigh",
+              severity: 7,
+              duration: "20 minutes",
+              bodyArea: "leg",
+              associatedSymptoms: ["blistering", "pain"],
+            },
+          ],
+        }),
+      );
+      // Should be URGENT for scald, not EMERGENCY (no "severe burn" keyword match)
+      expect(result.riskLevel).toBe("URGENT");
+    });
+  });
 });

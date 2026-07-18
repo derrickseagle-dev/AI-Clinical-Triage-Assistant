@@ -63,6 +63,82 @@ const EMERGENCY_RED_FLAGS: { patterns: RegExp[]; reason: string; action: string 
     reason: "Signs of anaphylaxis — a severe, potentially fatal allergic reaction.",
     action: "Call 911 immediately. If you have an epinephrine auto-injector (EpiPen), use it now. Lie down with legs elevated.",
   },
+  {
+    patterns: [
+      /(?=.*\bfever\b)(?=.*\bconfus)(?=.*\b(shak|rigor))/i,
+      /\bpossible\s*sepsis\b/i, /\bseptic\b/i, /\brigors\b/i,
+      /\bsepsis\b/i,
+    ],
+    reason: "Possible sepsis — a life-threatening systemic infection requiring immediate treatment.",
+    action: "Call 911 immediately. Sepsis is a medical emergency that worsens rapidly. Note the time symptoms started.",
+  },
+  {
+    patterns: [
+      /(?=.*\bswollen\s*leg\b)(?=.*\bpain\b)(?=.*\bshortness\s*of\s*breath\b)/i,
+      /\bdeep\s*vein\s*thrombosis\b/i, /\bpulmonary\s*embolism\b/i,
+      /\bblood\s*clot\b/i,
+    ],
+    reason: "Possible deep vein thrombosis or pulmonary embolism — a life-threatening condition.",
+    action: "Call 911 immediately. Do not massage the affected leg. Keep the leg elevated if possible.",
+  },
+  {
+    patterns: [
+      /\bectopic\b/i,
+      /(?=.*\bsharp\s*abdominal\s*pain\b)(?=.*\bvaginal\s*bleeding\b)/i,
+    ],
+    reason: "Possible ectopic pregnancy — a life-threatening condition requiring emergency surgery.",
+    action: "Call 911 immediately. Ectopic pregnancy can cause life-threatening internal bleeding.",
+  },
+  {
+    patterns: [
+      /\btesticular\s*pain\b/i, /\btesticle\s*pain\b/i,
+      /\bswollen\s*testicle\b/i, /\btorsion\b/i,
+    ],
+    reason: "Possible testicular torsion — a time-sensitive surgical emergency.",
+    action: "Call 911 or go to the nearest emergency room immediately. Testicular torsion requires surgery within hours to save the testicle.",
+  },
+  {
+    patterns: [
+      /(?=.*\b(tearing|ripping)\s*pain\b)(?=.*\b(chest|back)\b)/i,
+      /\baortic\s*dissection\b/i,
+    ],
+    reason: "Possible aortic dissection — a life-threatening tear in the aorta requiring emergency surgery.",
+    action: "Call 911 immediately. Aortic dissection is a surgical emergency. Keep the patient calm and still.",
+  },
+  {
+    patterns: [
+      /(?=.*\bstiff\s*neck\b)(?=.*\bfever\b)(?=.*\bheadache\b)/i,
+      /\bmeningitis\b/i,
+      /(?=.*\bcan'?t\s*touch\s*chin\s*to\s*chest\b)(?=.*\bfever\b)/i,
+    ],
+    reason: "Possible meningitis — a life-threatening infection of the brain and spinal cord.",
+    action: "Call 911 immediately. Meningitis can progress rapidly. Note if the patient has difficulty with bright lights.",
+  },
+  {
+    patterns: [
+      /\bsevere\s*burn\b/i, /\bthird\s*degree\b/i,
+      /\bburned\s*face\b/i, /\bburn\s*on\s*hands\b/i,
+      /\blarge\s*burn\b/i, /\belectrical\s*burn\b/i,
+    ],
+    reason: "Severe burn requiring emergency evaluation and treatment.",
+    action: "Call 911 immediately. Cool the burn with cool (not cold) running water for at least 20 minutes. Do not apply ice, butter, or ointments. Cover loosely with a clean, dry cloth.",
+  },
+  {
+    patterns: [
+      /\belectrocuted\b/i, /\belectric\s*shock\b/i,
+      /\blightning\s*strike\b/i, /\bstruck\s*by\s*lightning\b/i,
+    ],
+    reason: "Electrical injury or lightning strike — risk of cardiac arrhythmia, burns, and internal damage.",
+    action: "Call 911 immediately. Do not touch the person if they are still in contact with the electrical source. Turn off the power source if safe to do so.",
+  },
+  {
+    patterns: [
+      /\bdrowning\b/i, /\bnearly\s*drowned\b/i,
+      /\binhaled\s*water\b/i, /\bsubmerged\b/i,
+    ],
+    reason: "Near-drowning incident — risk of secondary drowning and respiratory failure.",
+    action: "Call 911 immediately. Even if the person seems recovered, delayed complications can be fatal. Keep the person warm and monitor breathing.",
+  },
 ];
 
 // ─── Pediatric Red Flags (age < 18) ────────────────────────────────────────────
@@ -206,6 +282,61 @@ const MENTAL_HEALTH_CRISIS_RULES: {
   },
 ];
 
+// ─── Overdose / Poisoning Rules ──────────────────────────────────────────────
+
+const OVERDOSE_POISONING_RULES: {
+  patterns: RegExp[];
+  reason: string;
+  action: string;
+  level: RiskLevel;
+}[] = [
+  {
+    patterns: [
+      /\boverdose\b/i, /\boverdosed\b/i, /\btook\s*too\s*many\b/i,
+      /\btoo\s*much\s*medication\b/i, /\btoo\s*many\s*pills\b/i,
+      /\baccidental\s*ingestion\b/i,
+    ],
+    reason: "Known or suspected overdose detected.",
+    action: "Call 911 immediately. Call Poison Control (1-800-222-1222). Do NOT induce vomiting. Collect the container/label if safe to do so.",
+    level: "EMERGENCY",
+  },
+  {
+    patterns: [
+      /\bpinpoint\s*pupils\b/i, /\btiny\s*pupils\b/i,
+    ],
+    reason: "Pinpoint pupils with possible drug context — potential opioid overdose.",
+    action: "Call 911 immediately. Call Poison Control (1-800-222-1222). Do NOT induce vomiting. Collect the container/label if safe to do so.",
+    level: "EMERGENCY",
+  },
+  {
+    patterns: [
+      /\bdrank\s*bleach\b/i, /\bswallowed\s*cleaner\b/i, /\bate\s*poison\b/i,
+      /\bingested\s*chemical\b/i, /\bdrank\s*gasoline\b/i, /\btook\s*rat\s*poison\b/i,
+    ],
+    reason: "Toxic ingestion detected — corrosive or poisonous substance.",
+    action: "Call 911 immediately. Call Poison Control (1-800-222-1222). Do NOT induce vomiting. Collect the container/label if safe to do so.",
+    level: "EMERGENCY",
+  },
+  {
+    patterns: [
+      /\bcarbon\s*monoxide\b/i, /\bCO\s*poisoning\b/i, /\bexhaust\s*fumes\b/i,
+      /\bgarage\s*with\s*car\s*running\b/i,
+    ],
+    reason: "Possible carbon monoxide poisoning — life-threatening.",
+    action: "Call 911 immediately. Get to fresh air immediately. Call Poison Control (1-800-222-1222). Do NOT induce vomiting.",
+    level: "EMERGENCY",
+  },
+  {
+    patterns: [
+      /\balcohol\s*poisoning\b/i,
+      /(?=.*\bdrank\s*too\s*much\s*alcohol\b)(?=.*\b(unconscious|won'?t\s*wake)\b)/i,
+    ],
+    reason: "Alcohol poisoning — risk of respiratory depression and death.",
+    action: "Call 911 immediately. Call Poison Control (1-800-222-1222). Do NOT induce vomiting. Keep the person on their side to prevent choking.",
+    level: "EMERGENCY",
+  },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Check if any emergency red-flag pattern matches the text. */
@@ -324,6 +455,54 @@ function checkMentalHealthCrisis(
         }
         break; // one match per rule category
       }
+    }
+  }
+
+  return { level, reasons, actions };
+}
+
+/**
+ * Check for overdose or poisoning indicators: known/suspected overdose,
+ * opioid toxidrome, toxic ingestion, carbon monoxide, alcohol poisoning.
+ * Returns the highest risk level, the matching reasons, and recommended actions.
+ */
+function checkOverdosePoisoning(
+  chiefComplaint: string,
+  symptoms: SymptomInput[],
+): { level: RiskLevel | null; reasons: string[]; actions: string[] } {
+  const allText = [
+    chiefComplaint,
+    ...symptoms.map((s) => s.description),
+    ...symptoms.flatMap((s) => s.associatedSymptoms),
+  ].join(" | ");
+
+  const reasons: string[] = [];
+  const actions: string[] = [];
+  let level: RiskLevel | null = null;
+
+  for (const rule of OVERDOSE_POISONING_RULES) {
+    for (const pattern of rule.patterns) {
+      if (pattern.test(allText)) {
+        reasons.push(rule.reason);
+        actions.push(rule.action);
+        if (rule.level === "EMERGENCY") {
+          level = "EMERGENCY";
+        } else if (rule.level === "URGENT" && level !== "EMERGENCY") {
+          level = "URGENT";
+        }
+        break; // one match per rule category
+      }
+    }
+  }
+
+  // Additional combined check: "not breathing" with drug context (opioid toxidrome)
+  if (!level || level !== "EMERGENCY") {
+    const hasNotBreathing = /\bnot\s*breathing\b/i.test(allText);
+    const hasDrugContext = /\b(heroin|opioid|fentanyl|pills?\b.*\btook|drug|overdose|narcan)\b/i.test(allText);
+    if (hasNotBreathing && hasDrugContext) {
+      reasons.push("Respiratory depression with drug context — potential opioid overdose.");
+      actions.push("Call 911 immediately. Call Poison Control (1-800-222-1222). Do NOT induce vomiting. Collect the container/label if safe to do so.");
+      level = "EMERGENCY";
     }
   }
 
@@ -595,6 +774,19 @@ export function assessRisk(triageCase: TriageCase): TriageResult {
     }
   }
 
+  // ── Step 3b: Overdose / poisoning detection ──
+  const overdoseAssessment = checkOverdosePoisoning(chiefComplaint, symptoms);
+  if (overdoseAssessment.reasons.length > 0) {
+    allReasons.push(...overdoseAssessment.reasons);
+    allActions.push(...overdoseAssessment.actions);
+    if (
+      overdoseAssessment.level === "EMERGENCY" ||
+      (overdoseAssessment.level === "URGENT" && riskLevel !== "EMERGENCY")
+    ) {
+      riskLevel = overdoseAssessment.level;
+    }
+  }
+
   // ── Step 4: Vitals assessment ──
   const vitalsAssessment = assessVitals(vitals, age);
   if (vitalsAssessment.reasons.length > 0) {
@@ -618,6 +810,34 @@ export function assessRisk(triageCase: TriageCase): TriageResult {
       (urgencyAssessment.level === "ROUTINE" && riskLevel === "SELF_CARE")
     ) {
       riskLevel = urgencyAssessment.level;
+    }
+  }
+
+  // ── Burn severity scaling (non-severe burns) ──
+  // Only applies if no emergency red flag already caught the burn
+  if (riskLevel !== "EMERGENCY") {
+    const allTextBurn = [
+      chiefComplaint,
+      ...symptoms.map((s) => s.description),
+      ...symptoms.flatMap((s) => s.associatedSymptoms),
+    ].join(" | ");
+    const hasBurnMention = /\b(burn|scald)\b/i.test(allTextBurn);
+    if (hasBurnMention) {
+      const isMinorBurn = /\b(small\s*burn|minor\s*burn)\b/i.test(allTextBurn);
+      if (isMinorBurn) {
+        if (riskLevel === "SELF_CARE") {
+          riskLevel = "ROUTINE";
+        }
+        allReasons.push("Minor burn reported — treatable at home but should be evaluated if signs of infection develop.");
+        allActions.push("Run cool water over the burn for at least 10 minutes. Apply aloe vera or burn ointment. Cover with a sterile, non-stick bandage. Seek care if redness spreads, blisters form, or pain worsens.");
+      } else {
+        // Non-minor burn → URGENT (unless already EMERGENCY or URGENT)
+        if (riskLevel !== "URGENT") {
+          riskLevel = "URGENT";
+        }
+        allReasons.push("Burn or scald reported — requires professional evaluation for depth and extent.");
+        allActions.push("Seek urgent care for burn evaluation. Cool the burn with cool (not cold) running water for at least 20 minutes. Do not apply ice, butter, or ointments. Cover loosely with a clean, dry cloth.");
+      }
     }
   }
 
