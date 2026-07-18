@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import type { QueueEntry, TriageResult } from "../types";
+import type { QueueEntry } from "../types";
 
 interface TriageFormProps {
   onResult: (entry: QueueEntry) => void;
@@ -89,14 +89,20 @@ export default function TriageForm({ onResult }: TriageFormProps) {
         return;
       }
 
-      const result = data as TriageResult;
-
+      // Use server-provided id and createdAt when available (DB mode),
+      // fall back to client-generated values (in-memory mode)
       const entry: QueueEntry = {
-        id: crypto.randomUUID(),
+        id: data.id || crypto.randomUUID(),
         chiefComplaint: chiefComplaint.trim(),
         age: Number(age),
-        result,
-        createdAt: new Date().toISOString(),
+        result: {
+          riskLevel: data.riskLevel,
+          confidence: data.confidence,
+          reasoning: data.reasoning,
+          recommendedAction: data.recommendedAction,
+          followUpGuidance: data.followUpGuidance,
+        },
+        createdAt: data.createdAt || new Date().toISOString(),
       };
 
       onResult(entry);

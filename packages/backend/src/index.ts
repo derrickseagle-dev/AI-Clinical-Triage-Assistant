@@ -3,6 +3,7 @@ import cors from "cors";
 import { healthRouter } from "./routes/health.js";
 import { triageRouter } from "./routes/triage.js";
 import { intakeRouter } from "./routes/intake.js";
+import { initSchema } from "./db/schema.js";
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -15,6 +16,9 @@ app.use("/api", healthRouter);
 app.use("/api", triageRouter);
 app.use("/api", intakeRouter);
 
-app.listen(PORT, () => {
-  console.log(`[backend] Astrata Health API running on port ${PORT}`);
+// Start server after running schema migration
+initSchema().then(() => {
+  app.listen(PORT, () => {
+    console.log(`[backend] Astrata Health API running on port ${PORT}`);
+  });
 });

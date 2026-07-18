@@ -11,11 +11,26 @@ function App() {
   const [backendStatus, setBackendStatus] = useState<string>("checking...");
   const [activeTab, setActiveTab] = useState<Tab>("clinician");
 
+  // ── Health check ──
   useEffect(() => {
     fetch("/api/health")
       .then((res) => res.json())
       .then((data) => setBackendStatus(data.status))
       .catch(() => setBackendStatus("unreachable"));
+  }, []);
+
+  // ── Load queue from database on mount ──
+  useEffect(() => {
+    fetch("/api/triage/history")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setQueue(data as QueueEntry[]);
+        }
+      })
+      .catch(() => {
+        // Silently ignore — queue starts empty if history is unavailable
+      });
   }, []);
 
   const handleResult = useCallback((entry: QueueEntry) => {
