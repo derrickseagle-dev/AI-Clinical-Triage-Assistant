@@ -65,6 +65,147 @@ const EMERGENCY_RED_FLAGS: { patterns: RegExp[]; reason: string; action: string 
   },
 ];
 
+// ─── Pediatric Red Flags (age < 18) ────────────────────────────────────────────
+
+const PEDIATRIC_RED_FLAGS: {
+  patterns: RegExp[];
+  reason: string;
+  action: string;
+  level: RiskLevel;
+}[] = [
+  {
+    patterns: [/\b(fever|temp\w*)\b/i, /\b(\d{3}\.?\d?)\s*(°F|F|fahrenheit)?\b/i],
+    // Fever in infants — only fires when age < 3 months AND temp ≥ 100.4 — checked in code
+    reason:
+      "Fever in an infant under 3 months (temperature ≥ 100.4°F) is a medical emergency — risk of serious bacterial infection.",
+    action:
+      "Call 911 immediately. Do not wait — infants deteriorate quickly. Do not give medication without medical direction.",
+    level: "EMERGENCY",
+  },
+  {
+    patterns: [
+      /\blethargic\b/i, /\bwon'?t\s*wake\b/i, /\bunresponsive\b/i,
+      /\bdifficult\s*to\s*wake\b/i, /\bbarely\s*responsive\b/i,
+    ],
+    reason:
+      "Lethargy or altered consciousness in a child may indicate sepsis, meningitis, or other life-threatening condition.",
+    action:
+      "Call 911 immediately. Do not wait — children can deteriorate very quickly. Keep the child in a safe position.",
+    level: "EMERGENCY",
+  },
+  {
+    patterns: [
+      /\bseizure\b/i, /\bconvulsion\b/i, /\bfitting\b/i,
+      /\bshaking\s*uncontrollably\b/i,
+    ],
+    reason:
+      "Seizure activity in a child requires immediate emergency evaluation.",
+    action:
+      "Call 911 immediately. Protect the child from injury — clear the area, do not restrain, and time the seizure. Do not put anything in their mouth.",
+    level: "EMERGENCY",
+  },
+  {
+    patterns: [
+      /\bno\s*wet\s*diaper/i, /\bsunken\s*eyes\b/i, /\bno\s*tears\b/i,
+      /\bdry\s*mouth\b.*\bnot\s*drinking\b/i, /\bnot\s*drinking\b.*\bdry\s*mouth\b/i,
+    ],
+    reason:
+      "Signs of dehydration in a child — may indicate inadequate fluid intake or excessive losses requiring intervention.",
+    action:
+      "Seek urgent care within 4 hours. Offer small, frequent sips of an oral rehydration solution. Monitor for fewer wet diapers.",
+    level: "URGENT",
+  },
+  {
+    patterns: [
+      /\bbreathing\s*fast\b/i, /\bretractions\b/i, /\bnasal\s*flaring\b/i,
+      /\bribs\s*showing\s*when\s*breathing\b/i,
+    ],
+    reason:
+      "Rapid breathing or respiratory retractions in a child may indicate respiratory distress or impending failure.",
+    action:
+      "Seek urgent care within 4 hours. Keep the child calm and upright. If lips turn blue or breathing worsens, call 911 immediately.",
+    level: "URGENT",
+  },
+  {
+    patterns: [
+      /\brash\s*that\s*doesn'?t\s*fade\b/i, /\bnon-blanching\s*rash\b/i,
+      /\bglass\s*test\b/i, /\bpurple\s*spots\b/i,
+    ],
+    reason:
+      "A non-blanching rash may indicate meningococcal septicemia or other serious infection — a life-threatening emergency.",
+    action:
+      "Call 911 immediately. Do not wait — this can progress rapidly. Perform the glass test: press a clear glass against the rash; if spots do not fade, seek emergency care.",
+    level: "EMERGENCY",
+  },
+  {
+    patterns: [
+      /\bwon'?t\s*stop\s*crying\b/i, /\binconsolable\b/i,
+      /\bhigh\s*pitched\s*cry\b/i, /\babnormal\s*cry\b/i,
+    ],
+    reason:
+      "Inconsolable or high-pitched crying in a child may indicate pain, neurological issues, or serious illness.",
+    action:
+      "Seek urgent care within 12 hours. Try calming techniques in the meantime. If the child becomes lethargic or unresponsive, call 911 immediately.",
+    level: "URGENT",
+  },
+  {
+    patterns: [
+      /\bfloppy\b/i, /\blimp\b/i, /\bpoor\s*tone\b/i,
+      /\blike\s*a\s*rag\s*doll\b/i,
+    ],
+    reason:
+      "Floppy or poor muscle tone in a child may indicate sepsis, dehydration, or a serious neurological condition.",
+    action:
+      "Call 911 immediately. Keep the child warm and in a safe position. Do not delay — floppy tone in children is a critical warning sign.",
+    level: "EMERGENCY",
+  },
+];
+
+// ─── Mental Health Crisis Rules ────────────────────────────────────────────────
+
+const MENTAL_HEALTH_CRISIS_RULES: {
+  patterns: RegExp[];
+  reason: string;
+  action: string;
+  level: RiskLevel;
+}[] = [
+  {
+    patterns: [
+      /\bsuicidal\b/i, /\bwant\s*to\s*die\b/i, /\bend\s*my\s*life\b/i,
+      /\bkill\s*myself\b/i, /\bself\s*harm\b/i, /\bcutting\s*myself\b/i,
+      /\bhurt\s*myself\b/i, /\bsuicide\b/i,
+    ],
+    reason:
+      "Suicidal ideation or self-harm statements detected — this is a psychiatric emergency requiring immediate intervention.",
+    action:
+      "Call 988 (Suicide & Crisis Lifeline) or 911 immediately. Stay with the person — do not leave them alone. Remove any means of harm (weapons, medications, sharp objects).",
+    level: "EMERGENCY",
+  },
+  {
+    patterns: [
+      /\bhearing\s*voices\b/i, /\bseeing\s*things\b/i, /\bhallucinat/i,
+      /\bparanoid\b/i, /\bthey'?re\s*watching\s*me\b/i, /\bdelusions?\b/i,
+      /\bnot\s*real\b/i,
+    ],
+    reason:
+      "Psychosis or hallucinations — the person may be at risk of harming themselves or others due to impaired reality testing.",
+    action:
+      "Call 988 (Suicide & Crisis Lifeline) or 911 immediately. Stay calm and reassuring. Do not argue about the hallucinations or delusions. Remove any potential weapons or dangerous objects from the area.",
+    level: "EMERGENCY",
+  },
+  {
+    patterns: [
+      /\bviolent\b/i, /\baggressive\b/i, /\bout\s*of\s*control\b/i,
+      /\battacking\b/i, /\bthreatening\b/i,
+    ],
+    reason:
+      "Severe agitation or violent behavior — risk of harm to self or others requires urgent intervention.",
+    action:
+      "Call 988 (Suicide & Crisis Lifeline) for guidance, or 911 if there is immediate danger. Ensure your own safety first — do not physically confront an agitated person. Remove bystanders from the area.",
+    level: "URGENT",
+  },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Check if any emergency red-flag pattern matches the text. */
@@ -90,6 +231,103 @@ function checkEmergencyRedFlags(chiefComplaint: string, symptoms: SymptomInput[]
   }
 
   return { matches, matchCount: matches.length };
+}
+
+/**
+ * Check pediatric-specific red flags for patients under 18.
+ * Returns the highest risk level, the matching reasons, and recommended actions.
+ */
+function checkPediatricRedFlags(
+  chiefComplaint: string,
+  symptoms: SymptomInput[],
+  vitals: VitalInput | undefined,
+  age: number,
+): { level: RiskLevel | null; reasons: string[]; actions: string[] } {
+  if (age >= 18) {
+    return { level: null, reasons: [], actions: [] };
+  }
+
+  const allText = [
+    chiefComplaint,
+    ...symptoms.map((s) => s.description),
+    ...symptoms.flatMap((s) => s.associatedSymptoms),
+  ].join(" | ");
+
+  const reasons: string[] = [];
+  const actions: string[] = [];
+  let level: RiskLevel | null = null;
+
+  for (const flag of PEDIATRIC_RED_FLAGS) {
+    // Special handling: Fever in infants < 3 months is only EMERGENCY if temp ≥ 100.4°F
+    const isFeverInfantRule =
+      flag.reason.includes("Fever in an infant under 3 months");
+    if (isFeverInfantRule) {
+      // Only apply if age < 3 months (we use age < 1 as a proxy since age is in years; for
+      // infants under 3 months, age would be 0 in integer years)
+      if (age > 0) continue;
+      const temp = vitals?.temperatureF;
+      if (temp === undefined || temp < 100.4) continue;
+      // Now check that fever-related text is present
+      const hasFeverText = /\b(fever|febrile|temp|temperature)\b/i.test(allText);
+      if (!hasFeverText) continue;
+
+      reasons.push(flag.reason);
+      actions.push(flag.action);
+      level = "EMERGENCY";
+      continue;
+    }
+
+    for (const pattern of flag.patterns) {
+      if (pattern.test(allText)) {
+        reasons.push(flag.reason);
+        actions.push(flag.action);
+        if (flag.level === "EMERGENCY") {
+          level = "EMERGENCY";
+        } else if (flag.level === "URGENT" && level !== "EMERGENCY") {
+          level = "URGENT";
+        }
+        break; // one match per flag category
+      }
+    }
+  }
+
+  return { level, reasons, actions };
+}
+
+/**
+ * Check for mental health crisis indicators: suicidal ideation, psychosis, severe agitation.
+ * Returns the highest risk level, the matching reasons, and recommended actions.
+ */
+function checkMentalHealthCrisis(
+  chiefComplaint: string,
+  symptoms: SymptomInput[],
+): { level: RiskLevel | null; reasons: string[]; actions: string[] } {
+  const allText = [
+    chiefComplaint,
+    ...symptoms.map((s) => s.description),
+    ...symptoms.flatMap((s) => s.associatedSymptoms),
+  ].join(" | ");
+
+  const reasons: string[] = [];
+  const actions: string[] = [];
+  let level: RiskLevel | null = null;
+
+  for (const rule of MENTAL_HEALTH_CRISIS_RULES) {
+    for (const pattern of rule.patterns) {
+      if (pattern.test(allText)) {
+        reasons.push(rule.reason);
+        actions.push(rule.action);
+        if (rule.level === "EMERGENCY") {
+          level = "EMERGENCY";
+        } else if (rule.level === "URGENT" && level !== "EMERGENCY") {
+          level = "URGENT";
+        }
+        break; // one match per rule category
+      }
+    }
+  }
+
+  return { level, reasons, actions };
 }
 
 /** Check vitals for dangerous abnormalities warranting emergency or urgent care. */
@@ -302,11 +540,13 @@ function assessUrgency(
  *
  * Priority order:
  * 1. RED FLAGS (life-threatening)                        → EMERGENCY
- * 2. Abnormal vitals (critical)                           → EMERGENCY
- * 3. High-urgency patterns (severe pain, fracture, etc.)  → URGENT
- * 4. Abnormal vitals (urgent, non-critical)               → URGENT
- * 5. Moderate concern (persistent, moderate pain)          → ROUTINE
- * 6. Everything else                                       → SELF_CARE
+ * 2. Pediatric red flags (age < 18)                      → EMERGENCY / URGENT
+ * 3. Mental health crisis detection                      → EMERGENCY / URGENT
+ * 4. Abnormal vitals (critical)                           → EMERGENCY
+ * 5. High-urgency patterns (severe pain, fracture, etc.)  → URGENT
+ * 6. Abnormal vitals (urgent, non-critical)               → URGENT
+ * 7. Moderate concern (persistent, moderate pain)          → ROUTINE
+ * 8. Everything else                                       → SELF_CARE
  *
  * Within each tier, the first matching rule wins.
  * Confidence is calculated as the ratio of positive signals to total rules checked.
@@ -329,7 +569,33 @@ export function assessRisk(triageCase: TriageCase): TriageResult {
     }
   }
 
-  // ── Step 2: Vitals assessment ──
+  // ── Step 2: Pediatric-specific red flags (age < 18) ──
+  const pediatricAssessment = checkPediatricRedFlags(chiefComplaint, symptoms, vitals, age);
+  if (pediatricAssessment.reasons.length > 0) {
+    allReasons.push(...pediatricAssessment.reasons);
+    allActions.push(...pediatricAssessment.actions);
+    if (
+      pediatricAssessment.level === "EMERGENCY" ||
+      (pediatricAssessment.level === "URGENT" && riskLevel !== "EMERGENCY")
+    ) {
+      riskLevel = pediatricAssessment.level;
+    }
+  }
+
+  // ── Step 3: Mental health crisis detection ──
+  const mentalHealthAssessment = checkMentalHealthCrisis(chiefComplaint, symptoms);
+  if (mentalHealthAssessment.reasons.length > 0) {
+    allReasons.push(...mentalHealthAssessment.reasons);
+    allActions.push(...mentalHealthAssessment.actions);
+    if (
+      mentalHealthAssessment.level === "EMERGENCY" ||
+      (mentalHealthAssessment.level === "URGENT" && riskLevel !== "EMERGENCY")
+    ) {
+      riskLevel = mentalHealthAssessment.level;
+    }
+  }
+
+  // ── Step 4: Vitals assessment ──
   const vitalsAssessment = assessVitals(vitals, age);
   if (vitalsAssessment.reasons.length > 0) {
     allReasons.push(...vitalsAssessment.reasons);
@@ -341,7 +607,7 @@ export function assessRisk(triageCase: TriageCase): TriageResult {
     }
   }
 
-  // ── Step 3: Urgency patterns ──
+  // ── Step 5: Urgency patterns ──
   const urgencyAssessment = assessUrgency(chiefComplaint, symptoms, vitals, age);
   if (urgencyAssessment.reasons.length > 0) {
     allReasons.push(...urgencyAssessment.reasons);

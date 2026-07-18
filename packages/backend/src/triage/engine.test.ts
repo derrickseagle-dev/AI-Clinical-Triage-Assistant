@@ -561,4 +561,309 @@ describe("assessRisk", () => {
       expect(result.riskLevel).toBe("EMERGENCY");
     });
   });
+
+  // ── Pediatric Red Flags (age < 18) ────────────────────────────────────────
+
+  describe("pediatric red flags", () => {
+    it("returns EMERGENCY for lethargy / unresponsive child", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "My child is lethargic and difficult to wake",
+          age: 5,
+          symptoms: [
+            {
+              description: "Barely responsive, won't wake up",
+              severity: 9,
+              duration: "2 hours",
+              bodyArea: "whole body",
+              associatedSymptoms: ["fever"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("911");
+    });
+
+    it("returns EMERGENCY for seizure / convulsion in child", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "My daughter had a seizure",
+          age: 3,
+          symptoms: [
+            {
+              description: "Full body convulsion lasting 2 minutes",
+              severity: 9,
+              duration: "2 minutes",
+              bodyArea: "whole body",
+              associatedSymptoms: ["unresponsive", "shaking uncontrollably"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+    });
+
+    it("returns EMERGENCY for non-blanching rash in child", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "My baby has a rash that doesn't fade with the glass test",
+          age: 1,
+          symptoms: [
+            {
+              description: "Purple spots on arms and legs, non-blanching rash",
+              severity: 8,
+              duration: "3 hours",
+              bodyArea: "arms and legs",
+              associatedSymptoms: ["fever", "irritable"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("911");
+    });
+
+    it("returns EMERGENCY for floppy / poor tone in infant", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "My baby is floppy like a rag doll",
+          age: 0,
+          symptoms: [
+            {
+              description: "Poor muscle tone, limp and floppy",
+              severity: 9,
+              duration: "1 hour",
+              bodyArea: "whole body",
+              associatedSymptoms: ["not feeding"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+    });
+
+    it("returns URGENT for dehydration signs in child", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "My toddler has had no wet diaper for 8 hours and a dry mouth",
+          age: 2,
+          symptoms: [
+            {
+              description: "No wet diaper all day, sunken eyes, not drinking",
+              severity: 7,
+              duration: "8 hours",
+              bodyArea: "whole body",
+              associatedSymptoms: ["dry mouth", "no tears when crying"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("URGENT");
+      expect(result.recommendedAction).toContain("urgent");
+    });
+
+    it("returns URGENT for rapid breathing / retractions in child", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "My son is breathing fast and I can see his ribs when he breathes",
+          age: 4,
+          symptoms: [
+            {
+              description: "Nasal flaring and retractions, ribs showing when breathing",
+              severity: 7,
+              duration: "3 hours",
+              bodyArea: "chest",
+              associatedSymptoms: ["cough"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("URGENT");
+    });
+
+    it("returns URGENT for inconsolable crying / high-pitched cry", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "My infant won't stop crying and has a high pitched cry",
+          age: 0,
+          symptoms: [
+            {
+              description: "Inconsolable crying for 4 hours, abnormal high pitched cry",
+              severity: 7,
+              duration: "4 hours",
+              bodyArea: "whole body",
+              associatedSymptoms: ["refusing to feed"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("URGENT");
+    });
+
+    it("does NOT apply pediatric rules to adults", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I feel lethargic and floppy today",
+          age: 35,
+          symptoms: [
+            {
+              description: "Feeling very tired and weak",
+              severity: 5,
+              duration: "1 day",
+              bodyArea: "whole body",
+              associatedSymptoms: [],
+            },
+          ],
+        }),
+      );
+      // Adult with pediatric-sounding words should NOT trigger pediatric flags
+      // Should still be ROUTINE (moderate pain at severity 5) not EMERGENCY
+      expect(result.riskLevel).not.toBe("EMERGENCY");
+    });
+  });
+
+  // ── Mental Health Crisis Detection ──────────────────────────────────────────
+
+  describe("mental health crisis", () => {
+    it("returns EMERGENCY for suicidal ideation", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I want to end my life",
+          age: 25,
+          symptoms: [
+            {
+              description: "I feel suicidal and want to kill myself",
+              severity: 10,
+              duration: "3 days",
+              bodyArea: "mental",
+              associatedSymptoms: ["hopelessness", "not sleeping"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("988");
+      expect(result.recommendedAction).toContain("Suicide");
+    });
+
+    it("returns EMERGENCY for self-harm statements", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I've been cutting myself",
+          age: 17,
+          symptoms: [
+            {
+              description: "Self harm by cutting, I also want to hurt myself more",
+              severity: 8,
+              duration: "1 week",
+              bodyArea: "arms",
+              associatedSymptoms: ["depression"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("988");
+    });
+
+    it("returns EMERGENCY for psychosis / hallucinations", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "I've been hearing voices telling me to do things",
+          age: 30,
+          symptoms: [
+            {
+              description: "Hallucinating — seeing things that aren't real",
+              severity: 9,
+              duration: "2 days",
+              bodyArea: "mental",
+              associatedSymptoms: ["paranoid", "they're watching me"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("988");
+    });
+
+    it("returns EMERGENCY for paranoid delusions", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "The government is tracking me, they're watching me through cameras",
+          age: 40,
+          symptoms: [
+            {
+              description: "Paranoid delusions that aren't real",
+              severity: 8,
+              duration: "1 week",
+              bodyArea: "mental",
+              associatedSymptoms: ["anxiety", "not sleeping"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("988");
+    });
+
+    it("returns URGENT for severe agitation / violent behavior", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "My son is out of control and attacking people",
+          age: 16,
+          symptoms: [
+            {
+              description: "Violent and threatening others, completely aggressive and out of control",
+              severity: 9,
+              duration: "2 hours",
+              bodyArea: "mental",
+              associatedSymptoms: ["rage"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("URGENT");
+      expect(result.recommendedAction).toContain("988");
+    });
+
+    it("returns URGENT for threatening behavior", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "Patient is threatening staff and being aggressive",
+          age: 28,
+          symptoms: [
+            {
+              description: "Verbally threatening, physically aggressive posture",
+              severity: 7,
+              duration: "1 hour",
+              bodyArea: "mental",
+              associatedSymptoms: ["agitation", "pacing"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("URGENT");
+    });
+
+    it("returns EMERGENCY for suicide mention in associated symptoms", () => {
+      const result = assessRisk(
+        makeCase({
+          chiefComplaint: "Feeling very down lately",
+          age: 22,
+          symptoms: [
+            {
+              description: "Severe depression",
+              severity: 8,
+              duration: "2 weeks",
+              bodyArea: "mental",
+              associatedSymptoms: ["suicide thoughts", "can't eat"],
+            },
+          ],
+        }),
+      );
+      expect(result.riskLevel).toBe("EMERGENCY");
+      expect(result.recommendedAction).toContain("988");
+    });
+  });
 });
