@@ -1,10 +1,52 @@
 import { Router, Request, Response } from "express";
+import { randomUUID } from "node:crypto";
 import type { TriageCase } from "../triage/types.js";
 import { assessRisk } from "../triage/engine.js";
+import { sql, hasDb } from "../db.js";
 
 export const triageRouter = Router();
 
-triageRouter.post("/triage", (req: Request, res: Response) => {
+// ─── GET /api/triage/history ───────────────────────────────────────────────────
+
+triageRouter.get("/triage/history", async (_req: Request, res: Response) => {
+  if (!hasDb()) {
+    res.json([]);
+    return;
+  }
+
+  try {
+    const result = await sql`
+      SELECT id, chief_complaint, age, risk_level, confidence,
+             reasoning, recommended_action, follow_up_guidance, created_at
+      FROM triage_cases
+      ORDER BY created_at DESC
+      LIMIT 50
+    `;
+
+    const cases = result.map((row: Record<string, unknown>) => ({
+      id: row.id,
+      chiefComplaint: row.chief_complaint,
+      age: row.age,
+      result: {
+        riskLevel: row.risk_level,
+        confidence: row.confidence,
+        reasoning: row.reasoning,
+        recommendedAction: row.recommended_action,
+        followUpGuidance: row.follow_up_guidance,
+      },
+      createdAt: row.created_at,
+    }));
+
+    res.json(cases);
+  } catch (err) {
+    console.error("[triage] Failed to fetch history:", err);
+    res.json([]);
+  }
+});
+
+// ─── POST /api/triage ──────────────────────────────────────────────────────────
+
+triageRouter.post("/triage", async (req: Request, res: Response) => {
   const body = req.body as Partial<TriageCase>;
 
   // ── Validation ──
@@ -98,5 +140,36 @@ triageRouter.post("/triage", (req: Request, res: Response) => {
 
   const result = assessRisk(triageCase);
 
-  res.json(result);
+  // ── Persist to database (or fall back to in-memory ids) ──
+  let id: string = randomUUID();
+  let createdAt = new Date().toISOString();
+
+  if (hasDb()) {
+    try {
+      const dbResult = await sql`
+        INSERT INTO triage_cases (
+          chief_complaint, age, symptoms, vitals,
+          risk_level, confidence, reasoning,
+          recommended_action, follow_up_guidance
+        )
+        VALUES (
+          ${triageCase.chiefComplaint}, ${triageCase.age},
+          ${JSON.stringify(triageCase.symptoms)},
+          ${triageCase.vitals ? JSON.stringify(triageCase.vitals) : null},
+          ${result.riskLevel}, ${result.confidence}, ${result.reasoning},
+          ${result.recommendedAction}, ${result.followUpGuidance}
+        )
+        RETURNING id, created_at
+      `;
+      if (dbResult.length > 0) {
+        id = String(dbResult[0].id);
+        createdAt = String(dbResult[0].created_at);
+      }
+    } catch (err) {
+      console.error("[triage] Failed to persist case:", err);
+      // Fall through — id and createdAt already have in-memory values
+    }
+  }
+
+  res.json({ id, createdAt, ...result });
 });

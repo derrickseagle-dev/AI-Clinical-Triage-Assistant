@@ -5,6 +5,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { extname, resolve } from "node:path";
 import type { TriageCase, SymptomInput, VitalInput } from "../triage/types.js";
 import { assessRisk } from "../triage/engine.js";
+import { sql, hasDb } from "../db.js";
 
 // ─── Uploads directory ─────────────────────────────────────────────────────────
 
@@ -146,7 +147,7 @@ intakeRouter.post("/intake/vitals", (req: Request, res: Response) => {
 intakeRouter.post("/intake/triage", (req: Request, res: Response) => {
   const upload = createImageUploader().array("images", 10);
 
-  upload(req, res, (err) => {
+  upload(req, res, async (err) => {
     if (err) {
       const message = err instanceof multer.MulterError
         ? `Upload error: ${err.message}`
@@ -285,7 +286,7 @@ intakeRouter.post("/intake/triage", (req: Request, res: Response) => {
     // ── Run triage engine ──
     const triageResult = assessRisk(triageCase);
 
-    // ── Build response ──
+    // ── Build image metadata ──
     const uploadedImages = (files || []).map((f) => ({
       filename: f.filename,
       originalName: f.originalname,
@@ -294,7 +295,47 @@ intakeRouter.post("/intake/triage", (req: Request, res: Response) => {
       path: `/uploads/${f.filename}`,
     }));
 
+    // ── Persist to database (or fall back to in-memory ids) ──
+    let id: string = randomUUID();
+    let createdAt = new Date().toISOString();
+
+    if (hasDb()) {
+      try {
+        const imagePaths = uploadedImages.length > 0
+          ? JSON.stringify(uploadedImages.map((img) => img.path))
+          : null;
+
+        const dbResult = await sql`
+          INSERT INTO triage_cases (
+            chief_complaint, age, symptoms, vitals,
+            risk_level, confidence, reasoning,
+            recommended_action, follow_up_guidance,
+            image_paths, audio_transcript
+          )
+          VALUES (
+            ${triageCase.chiefComplaint}, ${triageCase.age},
+            ${JSON.stringify(triageCase.symptoms)},
+            ${triageCase.vitals ? JSON.stringify(triageCase.vitals) : null},
+            ${triageResult.riskLevel}, ${triageResult.confidence}, ${triageResult.reasoning},
+            ${triageResult.recommendedAction}, ${triageResult.followUpGuidance},
+            ${imagePaths},
+            ${audioTranscript || null}
+          )
+          RETURNING id, created_at
+        `;
+        if (dbResult.length > 0) {
+          id = String(dbResult[0].id);
+          createdAt = String(dbResult[0].created_at);
+        }
+      } catch (dbErr) {
+        console.error("[intake] Failed to persist case:", dbErr);
+        // Fall through — id and createdAt already have in-memory values
+      }
+    }
+
     res.json({
+      id,
+      createdAt,
       ...triageResult,
       images: uploadedImages.length > 0 ? uploadedImages : undefined,
       audioTranscript: audioTranscript || undefined,
